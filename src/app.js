@@ -1,24 +1,22 @@
 const express = require('express');
 const app = express();
+const { adminAuth, userAuth } = require("./middlewares/auth.js")
 
-// this a route and middleware function
-app.get("/users", (req, res, next) => {
-    console.log("handling the route handler 1");
-    // res.send("respose 1 ")
-    next()
+app.use('/admin', adminAuth)
+
+app.get("/admin/getAllData", (req, res, next) => {
+    console.log("all the data response sent")
+    res.send("all the users data")
 })
 
-// this is another route  and middleware function
-app.get("/users", (req, res, next) => {
-    console.log("handling the route handler 2");
-    res.send("respose 2 ")
+app.post("/admin/deleteData", (req, res, next) => {
+    console.log("delete data response sent")
+    res.send("Data deleted successfully.......")
 })
 
-app.use("/", (req, res, next) => {
-    res.send("from app.use / route")
-    next()
+app.use("/users", userAuth, (req, res, next) => {
+    res.send("user Data")
 })
-
 
 app.listen(7777, () => {
     console.log("server is listening to the port 7777")
