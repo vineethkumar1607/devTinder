@@ -1,21 +1,34 @@
 const express = require('express');
 const app = express();
-const { adminAuth, userAuth } = require("./middlewares/auth.js")
 
-app.use('/admin', adminAuth)
+// this doesnot work as it doesnot folows the order of execution
+// app.use("/", (err, req, res, next) => {
+//     if (err) {
+//         console.log("error in sending the response:", err)
+//         res.status(500).send("Something went wrogn")
+//     }
+// })
 
-app.get("/admin/getAllData", (req, res, next) => {
-    console.log("all the data response sent")
-    res.send("all the users data")
+app.use('/users', (req, res, next) => {
+    // showing the error message by using the try catch method
+    try {
+        throw new Error("error")
+        res.send("user Data....")
+
+     } catch (error) {
+        // console.log(error, "Error sending the response")
+        console.log("message sent error")
+        res.status(500).send("somenthiung went wrogn from try catch")
+    }
 })
 
-app.post("/admin/deleteData", (req, res, next) => {
-    console.log("delete data response sent")
-    res.send("Data deleted successfully.......")
-})
 
-app.use("/users", userAuth, (req, res, next) => {
-    res.send("user Data")
+// showing the errro using error object. this will only work if the try catch is not present
+app.use("/", (err, req, res, next) => {
+    if (err) {
+        console.log("error in sending the response:", err)
+        res.status(500).send("Something went wrogn")
+    }
 })
 
 app.listen(7777, () => {
