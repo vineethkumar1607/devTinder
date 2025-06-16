@@ -1,55 +1,31 @@
-const express = require("express");
+const express = require('express');
 const app = express();
 
+// A Route can have many request handlers, like below first argumment is route and second and third aruguments are first and second route handlers respectively
+app.get("/users", [(req, res, next) => {
+    console.log("handling the route handler 1");
 
-app.get("/search", (req, res) => {
+    next()
+    res.send("respose 1 ")
 
-    const term = req.query.q;
-    const page = req.query.page || 1;
-    res.send(`search term = ${term} and page = ${page}`)
+}, (req, res, next) => {
+    console.log("handling the route handler 2")
+    // res.send(" response 2")\
+    next()
+}], (req, res, next) => {
+    console.log("handling the route handler 3")
+    // res.send(" response 3")
+    next();
+}, (req, res, next) => {
+    console.log("handling the route handler 4")
+    // res.send(" response 4")
+    next()
+}, (req, res, next) => {
+    console.log("handling the route handler 5")
+    // res.send(" response 5")
+    next()
 })
 
-app.get("/users", (req, res) => {
-
-    const name = req.query.name;
-    const age = req.query.age
-    res.send(`name= ${name} and age=  ${age}`)
-})
-app.get("/users/:userId/:name/:password", (req, res) => {
-    res.send(req.params)
-
-})
-
-// app.use("/user", (req, res)=>{
-//     res.send("this is using 'use' method")
-// })
-// app.get(/\/ab+cd/, (req, res) => {
-// app.get("/ab*cd", (req, res) => {
-app.get(/\/ab?cd/, (req, res) => {
-    // app.get(/\/a(bc)+d/, (req, res) => {
-
-    res.send("abcd")
-})
-
-app.post("/user", (req, res) => {
-    res.send("user data saved to the database")
-})
-
-app.delete("/user", (req, res) => {
-    res.send("user deleted successfully")
-});
-
-app.get("/user", (req, res) => {
-    res.send({ name: "vineeth", mail: "vineeth@gmail.com" })
-})
-
-app.put("/user", (req, res) => {
-    res.send("data modified successfully")
-})
-
-app.patch("/user", (req, res) => {
-    res.send("data modified partially...")
-})
 app.listen(7777, () => {
     console.log("server is listening to the port 7777")
 })
