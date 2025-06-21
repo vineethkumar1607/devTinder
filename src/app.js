@@ -4,8 +4,20 @@ const express = require('express');
 const app = express();
 const connectDB = require("./config/database")
 const User = require("./models/user")
+const rateLimit = require('express-rate-limit');
+const userValidation = require("./middlewares/userValidation")
 
-app.use(express.json())
+// middleware for parsing the JSON
+app.use(express.json());
+
+
+// rate limiting for signup 
+const signupLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // for every 15 mins
+    min: 10, // only 10 requests allowed
+    message: "Too many signup attempts! please try again later"
+})
+
 
 // POST request to MongoDB. signing up the user
 app.post("/signup", async (req, res) => {
@@ -17,17 +29,41 @@ app.post("/signup", async (req, res) => {
         await user.save()
         res.status(201).send({ user: "SignedUp sucessfully..." })
     } catch (error) {
-        res.status(400).send({ error: "Failed to SignUp..." });
-        console.log(error + "signup failed")
+        console.log("Signup error (sanitized):", error.message || "Unknown error");
+
+        // Duplicate key (email already exists)
+        if (error.code === 11000) {
+            return res.status(409).json({
+                success: false,
+                error: {
+                    code: "account_exists",
+                    message: "An account with this email already exists. Please log in or reset your password."
+                }
+            });
+        }
+
+        // Mongoose validation errors (e.g., too many skills, weak password, etc.)
+        if (error.name === "ValidationError") {
+            return res.status(400).json({
+                success: false,
+                error: {
+                    code: "validation_error",
+                    message: Object.values(error.errors).map(e => e.message).join(", ")
+                }
+            });
+        }
+
+        // Fallback generic error
+        return res.status(400).json({
+            success: false,
+            error: "Invalid request"
+        });
     }
 })
 // finding the user by id by using findById method
 app.get("/user/:id", async (req, res) => {
     const userId = req.params.id;
     try {
-        // if (!mongoose.Types.ObjectId.isValid(userId)) {
-        //     return res.status(400).json({ error: "Invalid ID format" });
-        // }
         const user = await User.findById(userId)
         if (!user) {
             res.status(404).json("User not found")
@@ -86,15 +122,20 @@ app.delete("/user", async (req, res) => {
 })
 
 // updating the data by using the findByIdAndUpdate query
-app.patch("/user", async (req, res) => {
+app.patch("/user/:userId", async (req, res) => {
     const userId = req.body.id;
-    const updateData = req.body;
+    const updateUserData = req.body;
     try {
-        const updatedUser = await User.findByIdAndUpdate(userId, updateData, { returnDocument: 'before' });
-        if (!updatedUser) {
+        const allowedFields = ["password", "age", "gender", "about", "skills"];
+        const isAllowedUpdate = Object.keys(updateUserData).every(key => allowedFields.includes(key))
+        if (!isAllowedUpdate) {
+            throw new Error("Update is not allowed")
+        }
+        const updateUser = await User.findByIdAndUpdate(userId, updateUserData, { returnDocument: 'after' });
+        if (!updateUser) {
             res.status(404).json({ error: "user not found" })
         }
-        console.log(updatedUser)
+        console.log(updateUser)
         res.json("user updated successfully")
     } catch (error) {
         res.status(500).json({ error: "Something went wrong" })
