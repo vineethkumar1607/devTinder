@@ -1,11 +1,13 @@
 
 require("dotenv").config();
 const express = require('express');
+const bcrypt = require("bcrypt")
 const app = express();
 const connectDB = require("./config/database")
 const User = require("./models/user")
 const rateLimit = require('express-rate-limit');
-const userValidation = require("./middlewares/userValidation")
+const userValidation = require("./middlewares/userValidation");
+
 
 // middleware for parsing the JSON
 app.use(express.json());
@@ -18,31 +20,39 @@ const signupLimiter = rateLimit({
     message: "Too many signup attempts! please try again later"
 })
 
-
-// POST request to MongoDB. signing up the user
-app.post("/signup", async (req, res) => {
+app.post("/signup", userValidation, async (req, res) => {
     try {
-        //instance of the user model
-        console.log(req.body)
-        const user = new User(req.body)
-        //saves the data to the mongodb
-        await user.save()
-        res.status(201).send({ user: "SignedUp sucessfully..." })
-    } catch (error) {
-        console.log("Signup error (sanitized):", error.message || "Unknown error");
+        // Input validation
+        if (!req.body.password) {
+            return res.status(400).json({
+                success: false,
+                error: "Password is required"
+            });
+        }
 
-        // Duplicate key (email already exists)
+        const saltRounds = 10;
+        const hashPassword = await bcrypt.hash(req.body.password, saltRounds);
+        const userData = { ...req.body, password: hashPassword };
+
+        const user = new User(userData);
+        await user.save();
+
+        return res.status(201).send({ success: true, message: "Signed up successfully" });
+    } catch (error) {
+        console.log("Signup error:", error);
+
+        // Handle duplicate email
         if (error.code === 11000) {
             return res.status(409).json({
                 success: false,
                 error: {
                     code: "account_exists",
-                    message: "An account with this email already exists. Please log in or reset your password."
+                    message: "An account with this email already exists."
                 }
             });
         }
 
-        // Mongoose validation errors (e.g., too many skills, weak password, etc.)
+        // Handle validation errors
         if (error.name === "ValidationError") {
             return res.status(400).json({
                 success: false,
@@ -53,25 +63,56 @@ app.post("/signup", async (req, res) => {
             });
         }
 
-        // Fallback generic error
-        return res.status(400).json({
+        // Fallback error
+        console.error("Unhandled signup error:", error);
+        return res.status(500).json({
             success: false,
-            error: "Invalid request"
+            error: "An unexpected error occurred during signup"
         });
     }
+});
+
+app.post("/login", async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        // console.log(email, password);
+        if (!email || !password) {
+            return res.status(400).json({ success: false, message: "Email and password are required " })
+        }
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(401).json({ success: false, message: "Invalid credentials" })
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: "Invalid credentials" })
+        }
+        return res.status(200).json({ success: true, message: "Login successful" })
+
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false, message: "An error occured during login"
+        })
+    }
+
 })
+
 // finding the user by id by using findById method
 app.get("/user/:id", async (req, res) => {
     const userId = req.params.id;
     try {
         const user = await User.findById(userId)
         if (!user) {
-            res.status(404).json("User not found")
+            return res.status(404).json("User not found")
         } else {
-            res.json(user)
+            return res.json(user)
         }
     } catch (error) {
-        res.status(500).json("something went wrong")
+        return res.status(500).json("something went wrong")
     }
 })
 
@@ -83,12 +124,12 @@ app.get("/user", async (req, res) => {
     try {
         const user = await User.findOne({ mail: userMail })
         if (!user) {
-            res.status(404).json("user not found")
+            return res.status(404).json("user not found")
         } else {
-            res.json(user)
+            return res.json(user)
         }
     } catch (error) {
-        res.status(500).json("something went wrong")
+        return res.status(500).json("something went wrong")
     }
 })
 
@@ -99,12 +140,12 @@ app.get("/feed", async (req, res) => {
     try {
         const users = await User.find({ mail: userMail });
         if (users.length === 0) {
-            res.status(404).json("No Users found")
+            return res.status(404).json("No Users found")
         } else {
             res.json(users)
         }
     } catch (error) {
-        res.status(500).json({ error: "something went wrong" })
+        return res.status(500).json({ error: "something went wrong" })
     }
 })
 // DELETE request to delete the user by using foundByIdAndDelete query
@@ -113,32 +154,35 @@ app.delete("/user", async (req, res) => {
     try {
         const deleteUser = await User.findByIdAndDelete(userId)
         if (!deleteUser) {
-            res.status(404).json({ error: "user not found" })
+            return res.status(404).json({ error: "user not found" })
         }
         res.json("user deleted successfully")
     } catch (error) {
-        res.status(500).json("Something went wrong")
+        return res.status(500).json("Something went wrong")
     }
 })
 
 // updating the data by using the findByIdAndUpdate query
 app.patch("/user/:userId", async (req, res) => {
-    const userId = req.body.id;
+    const userId = req.params.id;
     const updateUserData = req.body;
+    const allowedFields = ["password", "age", "gender", "about", "skills", "photoUrl"];
+
+    const isAllowedUpdate = Object.keys(updateUserData).every(key => allowedFields.includes(key))
+    if (!isAllowedUpdate) {
+        return res.status(401).json({ message: "Update is not allowed" })
+    }
+
     try {
-        const allowedFields = ["password", "age", "gender", "about", "skills"];
-        const isAllowedUpdate = Object.keys(updateUserData).every(key => allowedFields.includes(key))
-        if (!isAllowedUpdate) {
-            throw new Error("Update is not allowed")
-        }
+
         const updateUser = await User.findByIdAndUpdate(userId, updateUserData, { returnDocument: 'after' });
         if (!updateUser) {
-            res.status(404).json({ error: "user not found" })
+            return res.status(404).json({ error: "user not found" })
         }
         console.log(updateUser)
         res.json("user updated successfully")
     } catch (error) {
-        res.status(500).json({ error: "Something went wrong" })
+        return res.status(500).json({ error: "Something went wrong" })
     }
 })
 
