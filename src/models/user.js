@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const validator = require("validator")
 const { Schema } = mongoose;
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt")
 
 //creating user Schema
 const userSchema = new Schema({
@@ -127,33 +129,63 @@ const userSchema = new Schema({
         maxlength: [500, 'About section cannot exceed 2000 characters.'],
         default: 'A passionate developer looking for exciting opportunities.'
     },
- skills: {
-    type: [String],
-    trim: true,
-    maxlength: [500, 'Skills section cannot exceed 500 characters.'],
-    default: [],
-    validate: [
-        {
-            validator: function (value) {
-                const maxAllowedSkillsCount = 10;
-                return value.length <= maxAllowedSkillsCount;
+    skills: {
+        type: [String],
+        trim: true,
+        maxlength: [500, 'Skills section cannot exceed 500 characters.'],
+        default: [],
+        validate: [
+            {
+                validator: function (value) {
+                    const maxAllowedSkillsCount = 10;
+                    return value.length <= maxAllowedSkillsCount;
+                },
+                message: `You can only add a maximum of 10 skills.`
             },
-            message: `You can only add a maximum of 10 skills.`
-        },
-        {
-            validator: function (value) {
-                return value.every(skill => typeof skill === "string" && skill.length <= 50);
-            },
-            message: 'Each skill name must be a string and cannot exceed 50 characters.'
-        }
-    ]
-}
+            {
+                validator: function (value) {
+                    return value.every(skill => typeof skill === "string" && skill.length <= 50);
+                },
+                message: 'Each skill name must be a string and cannot exceed 50 characters.'
+            }
+        ]
+    }
 
 
 },
     {
         timestamps: true,
     });
+
+userSchema.methods.generateAuthToken = async function () {
+    try {
+        const user = this;
+        const userId = user._id;
+        const privateKey = "dev@Tinder123";
+        //generating the JWTtoken
+        const token = await jwt.sign({ _id: userId }, privateKey, { expiresIn: "7d" });
+        return token;
+    } catch (error) {
+        console.error("Error during token generation:", error)
+        return null;
+    }
+}
+
+userSchema.methods.comparePassword = async function (userPlainPassword) {
+    try {
+        const user = this;
+        const hashPassword = user.password;
+        // comparing the user plain password and hash password
+        const isPasswordMatch = await bcrypt.compare(userPlainPassword, hashPassword);
+        return isPasswordMatch;
+    }
+    catch (error) {
+        console.error("Error comapringthe password:", error)
+        throw error;
+    }
+}
+
+
 // defining a Usermodel which takes two arguments, model name and userSchema
 const User = mongoose.model("User", userSchema);
 module.exports = User;

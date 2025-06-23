@@ -1,24 +1,29 @@
 
 require("dotenv").config();
 const express = require('express');
-const bcrypt = require("bcrypt")
+const bcrypt = require("bcrypt");
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 const app = express();
 const connectDB = require("./config/database")
 const User = require("./models/user")
 const rateLimit = require('express-rate-limit');
 const userValidation = require("./middlewares/userValidation");
+const userAuth = require("./middlewares/auth")
+
 
 
 // middleware for parsing the JSON
 app.use(express.json());
-
+app.use(cookieParser());
 
 // rate limiting for signup 
 const signupLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // for every 15 mins
     min: 10, // only 10 requests allowed
     message: "Too many signup attempts! please try again later"
-})
+});
+
 
 app.post("/signup", userValidation, async (req, res) => {
     try {
@@ -75,7 +80,7 @@ app.post("/signup", userValidation, async (req, res) => {
 app.post("/login", async (req, res) => {
     try {
         const { email, password } = req.body;
-        // console.log(email, password);
+        // checks whether the 
         if (!email || !password) {
             return res.status(400).json({ success: false, message: "Email and password are required " })
         }
@@ -85,20 +90,42 @@ app.post("/login", async (req, res) => {
             return res.status(401).json({ success: false, message: "Invalid credentials" })
         }
 
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-
-        if (!isPasswordValid) {
+        const isPasswordMatch = await user.comparePassword(password);
+        if (!isPasswordMatch) {
             return res.status(401).json({ message: "Invalid credentials" })
         }
-        return res.status(200).json({ success: true, message: "Login successful" })
+
+        // generating the token using JWT
+        const token = await user.generateAuthToken()
+
+        // sending the cookies to the client 
+        res.cookie("token", token, {
+            expires: new Date(Date.now() + 604800000)  // cookie expires in 7days , 604800000 = 7 days in milli seconds
+        });
+        return res.status(200).json({ success: true, message: "Login successful" });
 
 
     } catch (error) {
+        console.error("Login error details:", error);
         return res.status(500).json({
             success: false, message: "An error occured during login"
         })
     }
+})
 
+app.get("/profile", userAuth, async (req, res) => {
+    try {
+        const user = req.user;
+        if (!user) {
+            throw new Error("user not found")
+        }
+        return res.json(user)
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        })
+    }
 })
 
 // finding the user by id by using findById method
@@ -117,51 +144,6 @@ app.get("/user/:id", async (req, res) => {
 })
 
 
-// get request for finding the signle user
-app.get("/user", async (req, res) => {
-    // for finding  one user we use findOne method 
-    const userMail = req.body.mail;
-    try {
-        const user = await User.findOne({ mail: userMail })
-        if (!user) {
-            return res.status(404).json("user not found")
-        } else {
-            return res.json(user)
-        }
-    } catch (error) {
-        return res.status(500).json("something went wrong")
-    }
-})
-
-// get request for finding the multiple users
-app.get("/feed", async (req, res) => {
-    // for finding multiple users we use find method
-    const userMail = req.body.mail
-    try {
-        const users = await User.find({ mail: userMail });
-        if (users.length === 0) {
-            return res.status(404).json("No Users found")
-        } else {
-            res.json(users)
-        }
-    } catch (error) {
-        return res.status(500).json({ error: "something went wrong" })
-    }
-})
-// DELETE request to delete the user by using foundByIdAndDelete query
-app.delete("/user", async (req, res) => {
-    const userId = req.body.id;
-    try {
-        const deleteUser = await User.findByIdAndDelete(userId)
-        if (!deleteUser) {
-            return res.status(404).json({ error: "user not found" })
-        }
-        res.json("user deleted successfully")
-    } catch (error) {
-        return res.status(500).json("Something went wrong")
-    }
-})
-
 // updating the data by using the findByIdAndUpdate query
 app.patch("/user/:userId", async (req, res) => {
     const userId = req.params.id;
@@ -172,9 +154,7 @@ app.patch("/user/:userId", async (req, res) => {
     if (!isAllowedUpdate) {
         return res.status(401).json({ message: "Update is not allowed" })
     }
-
     try {
-
         const updateUser = await User.findByIdAndUpdate(userId, updateUserData, { returnDocument: 'after' });
         if (!updateUser) {
             return res.status(404).json({ error: "user not found" })
