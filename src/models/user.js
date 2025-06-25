@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt")
 
-//creating user Schema
+// creating user Schema
 const userSchema = new Schema({
     firstName: {
         type: String,
@@ -157,6 +157,7 @@ const userSchema = new Schema({
         timestamps: true,
     });
 
+// generating the cookies
 userSchema.methods.generateAuthToken = async function () {
     try {
         const user = this;
@@ -171,12 +172,13 @@ userSchema.methods.generateAuthToken = async function () {
     }
 }
 
-userSchema.methods.comparePassword = async function (userPlainPassword) {
+// comnparing the user input password with stotred hashpassword 
+userSchema.methods.comparePassword = async function (userPlainPasswordInput) {
     try {
         const user = this;
         const hashPassword = user.password;
-        // comparing the user plain password and hash password
-        const isPasswordMatch = await bcrypt.compare(userPlainPassword, hashPassword);
+        // comparing the user plain password with hash password
+        const isPasswordMatch = await bcrypt.compare(userPlainPasswordInput, hashPassword);
         return isPasswordMatch;
     }
     catch (error) {

@@ -22,7 +22,7 @@ const userAuth = async (req, res, next) => {
         next()
     }
     catch (error) {
-          console.error("Login error details:", error); // Add this line
+
         res.status(400).json({ error: error.message })
     }
 }
