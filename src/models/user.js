@@ -150,8 +150,6 @@ const userSchema = new Schema({
             }
         ]
     }
-
-
 },
     {
         timestamps: true,
@@ -173,16 +171,16 @@ userSchema.methods.generateAuthToken = async function () {
 }
 
 // comnparing the user input password with stotred hashpassword 
-userSchema.methods.comparePassword = async function (userPlainPasswordInput) {
+userSchema.methods.comparePassword = async function (userPasswordInput) {
     try {
         const user = this;
         const hashPassword = user.password;
         // comparing the user plain password with hash password
-        const isPasswordMatch = await bcrypt.compare(userPlainPasswordInput, hashPassword);
+        const isPasswordMatch = await bcrypt.compare(userPasswordInput, hashPassword);
         return isPasswordMatch;
     }
     catch (error) {
-        console.error("Error comapringthe password:", error)
+        console.error("Error comapring the password:", error)
         throw error;
     }
 }

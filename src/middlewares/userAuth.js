@@ -6,7 +6,7 @@ const userAuth = async (req, res, next) => {
         // extracting the token 
         const token = req.cookies.token;
         if (!token) {
-            throw new Error("Please login again")
+            throw new Error("Invalid request. Please login again!")
         }
         // decoding the token data 
         const privateKey = "dev@Tinder123";

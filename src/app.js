@@ -23,16 +23,16 @@ const signupLimiter = rateLimit({
     message: "Too many signup attempts! please try again later"
 });
 
-// Error handling middleware
-// app.use((err, req, res, next) => {
-//     console.error(err.stack);
-//     res.status(500).json({
-//         success: false,
-//         error: 'Internal Server Error',
-//         // message: process.env.NODE_ENV === 'development' ? err.message : undefined
-//         message: err.message || undefined
-//     });
-// });
+// At the bottom, after all routes
+app.use((err, req, res, next) => {
+    console.error("Internal Server Error:", err, err.message);
+
+    res.status(500).json({
+        success: false,
+        message: "Internal server error. Please try again later."
+    });
+});
+
 
 // connecting to the mongodb
 connectDB()

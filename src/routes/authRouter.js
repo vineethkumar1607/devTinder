@@ -2,10 +2,11 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt");
 const User = require("../models/user")
-const userValidation = require("../middlewares/userValidation");
+// const userValidation = require("../middlewares/userValidation");
+const userCreateValidation = require("../middlewares/userCreateValidation")
 
 // router for user signup
-router.post("/signup", userValidation, async (req, res) => {
+router.post("/signup", userCreateValidation, async (req, res) => {
     try {
         // Input validation
         if (!req.body.password) {
@@ -14,13 +15,16 @@ router.post("/signup", userValidation, async (req, res) => {
                 error: "Password is required"
             });
         }
-
+        // encrypting the password
         const saltRounds = 10;
+        console.log("STEP 1: Received body", req.body);
         const hashPassword = await bcrypt.hash(req.body.password, saltRounds);
+        console.log("STEP 2: Password hashed");
         const userData = { ...req.body, password: hashPassword };
 
         const user = new User(userData);
         await user.save();
+        console.log("STEP 3: User saved");
 
         return res.status(201).send({ success: true, message: "Signed up successfully" });
     } catch (error) {
@@ -107,5 +111,5 @@ router.post("/logout", (req, res) => {
     return res.status(200).json({ success: true, message: "Logged out successfully" })
 })
 
-console.log("✅ authRouter loaded!");
+
 module.exports = router;
