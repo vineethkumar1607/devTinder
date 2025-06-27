@@ -3,9 +3,10 @@ const express = require('express');
 const cookieParser = require("cookie-parser");
 const rateLimit = require('express-rate-limit');
 
-const connectDB = require("./config/database")
-const authRouter = require("./routes/authRouter")
-const profileRouter = require("./routes/profile")
+const connectDB = require("./config/database");
+const authRouter = require("./routes/authRouter");
+const profileRouter = require("./routes/profile");
+const requestRouter = require("./routes/request")
 
 const app = express();
 
@@ -13,8 +14,9 @@ app.use(express.json()); // To parse JSON request bodies
 app.use(cookieParser()); // To parse cookies
 
 // Routes 
-app.use("/auth", authRouter)
-app.use("/profile", profileRouter)
+app.use("/auth", authRouter);
+app.use("/profile", profileRouter);
+app.use("/request", requestRouter);
 
 // rate limiting for signup 
 const signupLimiter = rateLimit({

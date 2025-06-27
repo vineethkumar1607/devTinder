@@ -1,4 +1,4 @@
-const { passwordValidator, currentPassword } = require("../utils/userFields");
+const { passwordValidator, currentPassword,cofirmPassword } = require("../utils/userFields");
 const { validationResult } = require("express-validator");
 
 const updatePasswordValidation = [
@@ -6,21 +6,22 @@ const updatePasswordValidation = [
     currentPassword,
     // validation update password with same password validation
     passwordValidator("newPassword"),
+    cofirmPassword,
 
-        // Custom error formatter
-        (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({
-            success: false,
-            errors: errors.array().map(err => ({
-                field: err.path,
-                message: err.msg
-            }))
-        });
+    // Custom error formatter
+    (req, res, next) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                errors: errors.array().map(err => ({
+                    field: err.path,
+                    message: err.msg
+                }))
+            });
+        }
+        next();
     }
-    next();
-}
 ];
 
 module.exports = updatePasswordValidation;

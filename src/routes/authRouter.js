@@ -7,6 +7,7 @@ const userCreateValidation = require("../middlewares/userCreateValidation")
 
 // router for user signup
 router.post("/signup", userCreateValidation, async (req, res) => {
+     console.log("STEP 1: Request received:", req.body);
     try {
         // Input validation
         if (!req.body.password) {

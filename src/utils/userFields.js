@@ -51,6 +51,8 @@ exports.email = body('email')
 exports.passwordValidator = (field = "password") => body(field)
     .exists().withMessage(`${field} is required`)
     .bail()
+    .notEmpty().withMessage(`${field} cannot be empty`)
+    .bail()
     .isLength({ min: 8, max: 64 }).withMessage('Must be 8-64 characters')
     .bail()
     .custom(value => {
@@ -64,6 +66,17 @@ exports.passwordValidator = (field = "password") => body(field)
         return true;
     });
 
+exports.cofirmPassword = body("confirmPassword")
+    .exists().withMessage("Confirm password is required")
+    .bail()
+    .notEmpty().withMessage("Cofirm password cannot be empty")
+    .bail()
+    .custom((value, { req }) => {
+        if (value !== req.body.NewPassword) {
+            throw new Error("New password and confirm password must match")
+        }
+        return true;
+    })
 // Age validation
 exports.age = body('age')
     .optional()
