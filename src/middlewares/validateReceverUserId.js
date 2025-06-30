@@ -3,11 +3,12 @@ const mongoose = require("mongoose");
 
 exports.validateReceiverUserId = [
     param("receiverUserId")
-        .exists().withMessage("Receiver user ID is required")
+        .exists().withMessage("receiver user id is required")
         .bail()
-        .custom(value => mongoose.isValidObjectId(value)).withMessage("Invalid receiver user ID"),
+        .custom(value => mongoose.isValidObjectId(value).withMessage("Invalid receiver user id")),
 
-    // Validation error handler middleware
+
+    // Error handler
     (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {

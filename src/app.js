@@ -6,7 +6,8 @@ const rateLimit = require('express-rate-limit');
 const connectDB = require("./config/database");
 const authRouter = require("./routes/authRouter");
 const profileRouter = require("./routes/profile");
-const requestRouter = require("./routes/request")
+const requestRouter = require("./routes/request");
+const userRouter = require('./routes/user')
 
 const app = express();
 
@@ -17,12 +18,13 @@ app.use(cookieParser()); // To parse cookies
 app.use("/auth", authRouter);
 app.use("/profile", profileRouter);
 app.use("/request", requestRouter);
+app.use('/user', userRouter);
 
 // rate limiting for signup 
 const signupLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // for every 15 mins
     max: 10, // only 10 requests allowed
-    message: "Too many signup attempts! please try again later"
+    message: "Too many signup attempts!. Please try again later"
 });
 
 // At the bottom, after all routes
