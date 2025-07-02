@@ -3,7 +3,7 @@ const userAuth = require('../middlewares/userAuth');
 const router = express.Router();
 const ConnectionRequestModel = require("../models/connectionRequest");
 const User = require('../models/user');
-const { set, connection } = require('mongoose');
+const getPaginationParams = require('../utils/pagination');
 
 const accessSafeData = "firstName lastName gender photoUrl about skills"
 
@@ -88,17 +88,9 @@ router.get("/requests/connections", userAuth, async (req, res) => {
 // route for feed API
 router.get("/feed", userAuth, async (req, res) => {
     try {
-        // default pagination config
-        const DEFAULT_LIMIT = 2;
-        const MAX_LIMIT = 3;
-        //pagination query params with default values
-        const page = parseInt(req.query.page) || 1;
-        let limit = parseInt(req.query.limit) || DEFAULT_LIMIT;
-        // sets the max no.of records per page
-        if (limit > MAX_LIMIT) {
-            limit = MAX_LIMIT;
-        }
-        const skip = (page - 1) * limit;
+        const { page, limit, skip } = getPaginationParams(req, {
+            defaultLimit: 3, maxLimit: 5
+        })
 
         const loggedInUser = req.user._id;
 
@@ -121,8 +113,12 @@ router.get("/feed", userAuth, async (req, res) => {
             }
         })
         // including the loggedin user to be excluded from the feed
-        excludeUsersfromFeed.add(loggedInUser);
+        excludeUsersfromFeed.add(loggedInUser.toString());
         // calculating the total no.of records in the collection
+        // console.log("Array.of:", Array.of(excludeUsersfromFeed));
+        // console.log("Array.from:", Array.from(excludeUsersfromFeed));
+
+
         const totalCount = await User.countDocuments({
             _id: { $nin: Array.from(excludeUsersfromFeed) }
         })
@@ -143,6 +139,7 @@ router.get("/feed", userAuth, async (req, res) => {
         })
 
     } catch (error) {
+          console.error("Feed Route Error:", error); 
         return res.status(500).json({
             success: false,
             message: "Internal server error"
