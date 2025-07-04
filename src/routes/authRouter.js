@@ -7,7 +7,7 @@ const userCreateValidation = require("../middlewares/userCreateValidation")
 
 // router for user signup
 router.post("/signup", userCreateValidation, async (req, res) => {
-     console.log("STEP 1: Request received:", req.body);
+    console.log("STEP 1: Request received:", req.body);
     try {
         // Input validation
         if (!req.body.password) {
@@ -89,7 +89,7 @@ router.post("/login", async (req, res) => {
             secure: isProduction, // dynamically set based on NODE_ENV
             expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)  // cookie expires in 7days 
         });
-        return res.status(200).json({ success: true, message: "Login successful" });
+        return res.status(200).json({ success: true, message: "Login successful", user: { user } });
 
 
     } catch (error) {

@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require('express');
 const cookieParser = require("cookie-parser");
 const rateLimit = require('express-rate-limit');
+const cors = require('cors')
 
 const connectDB = require("./config/database");
 const authRouter = require("./routes/authRouter");
@@ -14,6 +15,11 @@ const app = express();
 app.use(express.json()); // To parse JSON request bodies
 app.use(cookieParser()); // To parse cookies
 
+
+app.use(cors({
+    origin: 'http://localhost:5173',
+    credentials: true
+}))
 // Routes 
 app.use("/auth", authRouter);
 app.use("/profile", profileRouter);
